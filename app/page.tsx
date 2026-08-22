@@ -123,7 +123,7 @@ export default function LoginPage() {
 
           <label className="field-group">
             <span>Password</span>
-            <input type="password" placeholder="At least 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required minLength={mode === 'register' ? 8 : undefined} />
+            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required minLength={mode === 'register' ? 8 : undefined} />
           </label>
 
           {error && <p className="form-message error-message">{error}</p>}

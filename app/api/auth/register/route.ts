@@ -6,7 +6,7 @@ import { Prisma } from '@prisma/client'
 
 const registerSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
-  password: z.string().min(8, { message: 'At least 8 characters are required' }),
+  password: z.string().min(8, { message: 'Password are required' }),
   name: z.string().min(1).optional(),
 })
 
