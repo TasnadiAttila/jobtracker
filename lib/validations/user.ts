@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const createUserSchema = z.object({
-  email: z.string().email({ message: 'Érvénytelen email cím' }),
+  email: z.string().email({ message: 'Invalid email address' }),
   name: z.string().min(1).optional(),
 })
 

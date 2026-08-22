@@ -5,8 +5,8 @@ import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
 const registerSchema = z.object({
-  email: z.string().email({ message: 'Érvénytelen email cím' }),
-  password: z.string().min(8, { message: 'Legalább 8 karakter szükséges' }),
+  email: z.string().email({ message: 'Invalid email address' }),
+  password: z.string().min(8, { message: 'At least 8 characters are required' }),
   name: z.string().min(1).optional(),
 })
 
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       error.code === 'P2002'
     ) {
       return NextResponse.json(
-        { error: 'Ez az email cím már foglalt' },
+        { error: 'This email address is already in use' },
         { status: 409 }
       )
     }

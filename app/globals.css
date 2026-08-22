@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f1ea;
+  --foreground: #192b32;
+  --ink: #192b32;
+  --muted: #718087;
+  --line: #d8dedb;
+  --coral: #ef765f;
+  --coral-deep: #d95745;
 }
 
 @theme inline {
@@ -12,15 +17,49 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.auth-shell { display: grid; min-height: 100vh; grid-template-columns: minmax(300px, 0.92fr) minmax(420px, 1.08fr); background: var(--background); }
+.auth-intro { display: flex; flex-direction: column; justify-content: space-between; padding: clamp(2rem, 5vw, 5rem); color: #f8f5ef; background: var(--ink); background-image: radial-gradient(circle at 78% 15%, rgba(239, 118, 95, 0.24), transparent 28%), linear-gradient(145deg, #1d353d, #192b32 65%, #122126); }
+.brand-lockup { display: flex; align-items: center; gap: 0.7rem; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.01em; }
+.brand-mark { display: grid; width: 2.15rem; height: 2.15rem; place-items: center; border-radius: 0.65rem 0.65rem 0.65rem 0.15rem; color: var(--ink); background: var(--coral); font-size: 1.3rem; }
+.intro-copy { max-width: 31rem; margin: 4rem 0; }
+.eyebrow { margin: 0 0 1rem; color: var(--coral); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; }
+.intro-copy h1 { max-width: 11ch; margin: 0; font-size: clamp(2.7rem, 5vw, 5rem); line-height: 0.98; letter-spacing: -0.04em; }
+.intro-description { max-width: 27rem; margin: 1.7rem 0 0; color: #b9c5c5; font-size: 1rem; line-height: 1.7; }
+.intro-footer { display: flex; align-items: center; gap: 0.6rem; color: #a6b5b6; font-size: 0.78rem; }
+.status-dot { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: var(--coral); box-shadow: 0 0 0 0.3rem rgba(239, 118, 95, 0.12); }
+.auth-panel { display: grid; place-items: center; padding: 3rem clamp(1.5rem, 7vw, 7rem); }
+.auth-form-wrap { width: min(100%, 27rem); animation: reveal 500ms ease both; }
+.mobile-brand { display: none; }
+.form-heading { margin-bottom: 2.25rem; }
+.form-heading h2 { margin: 0; color: var(--ink); font-size: clamp(2rem, 4vw, 2.65rem); letter-spacing: -0.04em; }
+.form-heading > p:last-child { margin: 0.75rem 0 0; color: var(--muted); font-size: 0.95rem; }
+.field-group { display: grid; gap: 0.5rem; color: var(--ink); font-size: 0.78rem; font-weight: 700; }
+.field-group input { width: 100%; border: 1px solid var(--line); border-radius: 0.5rem; padding: 0.9rem 1rem; outline: none; color: var(--ink); background: rgba(255, 255, 255, 0.52); font: inherit; font-weight: 400; transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease; }
+.field-group input::placeholder { color: #9aa5a5; }
+.field-group input:focus { border-color: var(--coral); background: #fffdf9; box-shadow: 0 0 0 3px rgba(239, 118, 95, 0.14); }
+.form-message { margin: 0; border-radius: 0.45rem; padding: 0.7rem 0.8rem; font-size: 0.8rem; }
+.error-message { color: #a43f34; background: #fce9e5; }
+.success-message { color: #34664d; background: #e5f2e9; }
+.submit-button { display: flex; width: 100%; align-items: center; justify-content: space-between; border: 0; border-radius: 0.5rem; padding: 0.95rem 1.05rem; color: #fffaf4; background: var(--ink); font: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 160ms ease, transform 160ms ease; }
+.submit-button:hover:not(:disabled) { background: var(--coral-deep); transform: translateY(-1px); }
+.submit-button:disabled { cursor: wait; opacity: 0.55; }
+.mode-toggle { width: 100%; margin-top: 1.25rem; border: 0; color: var(--muted); background: transparent; font: inherit; font-size: 0.82rem; cursor: pointer; }
+.mode-toggle:hover { color: var(--coral-deep); }
+@keyframes reveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 760px) {
+  .auth-shell { display: block; }
+  .auth-intro { min-height: 16rem; padding: 1.5rem; }
+  .auth-intro .brand-lockup { display: none; }
+  .intro-copy { margin: 2.5rem 0 0; }
+  .intro-copy h1 { max-width: 14ch; font-size: clamp(2.25rem, 11vw, 3.5rem); }
+  .intro-description { display: none; }
+  .intro-footer { margin-top: 2rem; }
+  .auth-panel { padding: 2.5rem 1.5rem 3rem; }
+  .mobile-brand { display: flex; margin-bottom: 3rem; color: var(--ink); }
 }
