@@ -49,7 +49,7 @@ body {
 .submit-button { display: flex; width: 100%; align-items: center; justify-content: space-between; border: 0; border-radius: 0.5rem; padding: 0.95rem 1.05rem; color: #fffaf4; background: var(--ink); font: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 160ms ease, transform 160ms ease; }
 .submit-button:hover:not(:disabled) { background: var(--coral-deep); transform: translateY(-1px); }
 .submit-button:disabled { cursor: wait; opacity: 0.55; }
-.mode-toggle { width: 100%; margin-top: 1.25rem; border: 0; color: var(--muted); background: transparent; font: inherit; font-size: 0.82rem; cursor: pointer; }
+.mode-toggle {display: block; width: 100%; text-align: center; margin-top: 1.25rem; border: 0; color: var(--muted); background: transparent; font: inherit; font-size: 0.82rem; cursor: pointer; }
 .mode-toggle:hover { color: var(--coral-deep); }
 @keyframes reveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 760px) {

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,6 +23,12 @@ export default function LoginPage() {
     setLoading(true)
 
     if (mode === 'register') {
+      if (password !== confirmPassword) {
+        setError('The two passwords do not match')
+        setLoading(false)
+        return
+      }
+
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -48,6 +56,7 @@ export default function LoginPage() {
       setSuccess('Registration successful! You can now sign in.')
       setMode('login')
       setPassword('')
+      setConfirmPassword('')   
       return
     }
 
@@ -110,10 +119,19 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'register' && (
-            <label className="field-group">
-              <span>Full name</span>
-              <input type="text" placeholder="Alex Morgan" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
-            </label>
+            <div>
+              <label className="block text-xs font-medium text-[#6B6459] mb-1.5">
+                Confirm password
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+                className="w-full rounded-md border border-[#DDD5C7] bg-white px-3.5 py-2.5 text-[#1E2128] text-sm placeholder:text-[#B5AEA0] focus:outline-none focus:ring-2 focus:ring-[#DB9A3C]/40 focus:border-[#DB9A3C] transition-colors"
+              />
+            </div>
           )}
 
           <label className="field-group">
@@ -152,9 +170,18 @@ export default function LoginPage() {
           className="mode-toggle"
         >
           {mode === 'login'
-            ? 'Don’t have an account? Create one'
-            : 'Already have an account? Sign in'}
-        </button>
+              ? "Don't have an account? Create one"
+              : 'Already have an account? Sign in'}
+          </button>
+
+          {mode === 'login' && (
+            <Link
+              href="/reset-password"
+              className="mode-toggle resetPW"
+            >
+              Forgot your password?
+            </Link>
+          )}
         </div>
       </section>
     </main>

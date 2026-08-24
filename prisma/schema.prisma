@@ -16,6 +16,7 @@ model User {
 
   applications Application[]
   resumes      Resume[]
+  resetTokens  PasswordResetToken[]
 }
 
 model Company {
@@ -96,4 +97,13 @@ enum ApplicationStatus {
   OFFER
   REJECTED
   WITHDRAWN
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
