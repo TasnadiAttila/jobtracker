@@ -3,21 +3,37 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { StatusCell } from './status-cell'
+import { AppliedAtCell } from './applied-at-cell'
 
 const PAGE_SIZE = 9
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; location?: string; type?: string; page?: string }>
+  searchParams: Promise<{
+    q?: string
+    location?: string
+    type?: string
+    salaryMin?: string
+    salaryMax?: string
+    postedFrom?: string
+    postedTo?: string
+    status?: string
+    page?: string
+  }>
 }) {
   const session = await auth()
-  if (!session) redirect('/')
+  if (!session?.user?.id) redirect('/')
 
   const params = await searchParams
   const query = params.q ?? ''
   const locationFilter = params.location ?? ''
-  const typeFilter = params.type ?? '' // 'remote' | 'onsite' | ''
+  const typeFilter = params.type ?? ''
+  const salaryMinFilter = params.salaryMin ?? ''
+  const salaryMaxFilter = params.salaryMax ?? ''
+  const postedFromFilter = params.postedFrom ?? ''
+  const postedToFilter = params.postedTo ?? ''
+  const statusFilter = params.status ?? ''
   const page = Math.max(1, Number(params.page ?? 1))
 
   const where = {
@@ -33,6 +49,18 @@ export default async function DashboardPage({
       locationFilter ? { location: locationFilter } : {},
       typeFilter === 'remote' ? { remote: true } : {},
       typeFilter === 'onsite' ? { remote: false } : {},
+      // Salary: átfedés-alapú szűrés — a job sávja érintkezzen a megadott tartománnyal
+      salaryMinFilter ? { salaryMax: { gte: Number(salaryMinFilter) } } : {},
+      salaryMaxFilter ? { salaryMin: { lte: Number(salaryMaxFilter) } } : {},
+      // Posted dátum tartomány
+      postedFromFilter ? { postedAt: { gte: new Date(postedFromFilter) } } : {},
+      postedToFilter ? { postedAt: { lte: new Date(postedToFilter) } } : {},
+      // Státusz — a bejelentkezett user saját Application rekordjai alapján
+      statusFilter === 'NONE'
+        ? { applications: { none: { userId: session.user.id } } }
+        : statusFilter
+          ? { applications: { some: { userId: session.user.id, status: statusFilter as any } } }
+          : {},
     ],
   }
 
@@ -51,12 +79,12 @@ export default async function DashboardPage({
       where: { location: { not: null } },
     }),
     prisma.application.findMany({
-      where: { userId: session.user!.id },
-      select: { jobId: true, status: true },
+      where: { userId: session.user.id },
+      select: { jobId: true, status: true, appliedAt: true },
     }),
   ])
 
-  const statusByJobId = new Map(applications.map((a) => [a.jobId, a.status]))
+  const applicationByJobId = new Map(applications.map((a) => [a.jobId, a]))
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -65,6 +93,11 @@ export default async function DashboardPage({
       ...(query ? { q: query } : {}),
       ...(locationFilter ? { location: locationFilter } : {}),
       ...(typeFilter ? { type: typeFilter } : {}),
+      ...(salaryMinFilter ? { salaryMin: salaryMinFilter } : {}),
+      ...(salaryMaxFilter ? { salaryMax: salaryMaxFilter } : {}),
+      ...(postedFromFilter ? { postedFrom: postedFromFilter } : {}),
+      ...(postedToFilter ? { postedTo: postedToFilter } : {}),
+      ...(statusFilter ? { status: statusFilter } : {}),
       ...(page > 1 ? { page: String(page) } : {}),
       ...Object.fromEntries(Object.entries(overrides).map(([k, v]) => [k, String(v)])),
     })
@@ -93,46 +126,124 @@ export default async function DashboardPage({
         </div>
 
         {/* Kereső + szűrők */}
-        <form className="flex flex-col sm:flex-row gap-3 mb-6">
-          <input
-            type="text"
-            name="q"
-            defaultValue={query}
-            placeholder="Search jobs, companies…"
-            className="flex-1 rounded-md border border-[#DDD5C7] bg-white px-4 py-2.5 text-sm text-[#1E2128] placeholder:text-[#B5AEA0] focus:outline-none focus:ring-2 focus:ring-[#DB9A3C]/40 focus:border-[#DB9A3C]"
-          />
+        <form className="space-y-3 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              name="q"
+              defaultValue={query}
+              placeholder="Search jobs, companies…"
+              className="flex-1 rounded-md border border-[#DDD5C7] bg-white px-4 py-2.5 text-sm text-[#1E2128] placeholder:text-[#B5AEA0] focus:outline-none focus:ring-2 focus:ring-[#DB9A3C]/40 focus:border-[#DB9A3C]"
+            />
 
-          <select
-            name="location"
-            defaultValue={locationFilter}
-            className="rounded-md border border-[#DDD5C7] bg-white px-3 py-2.5 text-sm text-[#1E2128] focus:outline-none focus:ring-2 focus:ring-[#DB9A3C]/40"
-          >
-            <option value="">All Locations</option>
-            {locations
-              .filter((l) => l.location)
-              .map((l) => (
-                <option key={l.location} value={l.location!}>
-                  {l.location}
-                </option>
-              ))}
-          </select>
+            <select
+              name="location"
+              defaultValue={locationFilter}
+              className="rounded-md border border-[#DDD5C7] bg-white px-3 py-2.5 text-sm text-[#1E2128] focus:outline-none focus:ring-2 focus:ring-[#DB9A3C]/40"
+            >
+              <option value="">All Locations</option>
+              {locations
+                .filter((l) => l.location)
+                .map((l) => (
+                  <option key={l.location} value={l.location!}>
+                    {l.location}
+                  </option>
+                ))}
+            </select>
 
-          <select
-            name="type"
-            defaultValue={typeFilter}
-            className="rounded-md border border-[#DDD5C7] bg-white px-3 py-2.5 text-sm text-[#1E2128] focus:outline-none focus:ring-2 focus:ring-[#DB9A3C]/40"
-          >
-            <option value="">Any Type</option>
-            <option value="remote">Remote</option>
-            <option value="onsite">On-site</option>
-          </select>
+            <select
+              name="type"
+              defaultValue={typeFilter}
+              className="rounded-md border border-[#DDD5C7] bg-white px-3 py-2.5 text-sm text-[#1E2128] focus:outline-none focus:ring-2 focus:ring-[#DB9A3C]/40"
+            >
+              <option value="">Any Type</option>
+              <option value="remote">Remote</option>
+              <option value="onsite">On-site</option>
+            </select>
+          </div>
 
-          <button
-            type="submit"
-            className="rounded-md border border-[#DDD5C7] bg-white px-4 py-2.5 text-sm text-[#1E2128] hover:bg-[#F6F2EA] transition-colors"
-          >
-            Filter
-          </button>
+          <div className="flex flex-wrap gap-3 items-end">
+            <div>
+              <label className="block text-[11px] text-[#8A8375] mb-1">Min Salary</label>
+              <input
+                type="number"
+                name="salaryMin"
+                defaultValue={salaryMinFilter}
+                placeholder="$0"
+                className="w-28 rounded-md border border-[#DDD5C7] bg-white px-3 py-2 text-sm text-[#1E2128] placeholder:text-[#B5AEA0] focus:outline-none focus:ring-2 focus:ring-[#DB9A3C]/40"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] text-[#8A8375] mb-1">Max Salary</label>
+              <input
+                type="number"
+                name="salaryMax"
+                defaultValue={salaryMaxFilter}
+                placeholder="$999,000"
+                className="w-28 rounded-md border border-[#DDD5C7] bg-white px-3 py-2 text-sm text-[#1E2128] placeholder:text-[#B5AEA0] focus:outline-none focus:ring-2 focus:ring-[#DB9A3C]/40"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-[#8A8375] mb-1">Posted from</label>
+              <input
+                type="date"
+                name="postedFrom"
+                defaultValue={postedFromFilter}
+                className="rounded-md border border-[#DDD5C7] bg-white px-3 py-2 text-sm text-[#1E2128] focus:outline-none focus:ring-2 focus:ring-[#DB9A3C]/40"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] text-[#8A8375] mb-1">Posted to</label>
+              <input
+                type="date"
+                name="postedTo"
+                defaultValue={postedToFilter}
+                className="rounded-md border border-[#DDD5C7] bg-white px-3 py-2 text-sm text-[#1E2128] focus:outline-none focus:ring-2 focus:ring-[#DB9A3C]/40"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-[#8A8375] mb-1">Status</label>
+              <select
+                name="status"
+                defaultValue={statusFilter}
+                className="rounded-md border border-[#DDD5C7] bg-white px-3 py-2 text-sm text-[#1E2128] focus:outline-none focus:ring-2 focus:ring-[#DB9A3C]/40"
+              >
+                <option value="">Any Status</option>
+                <option value="NONE">Not tracked</option>
+                <option value="SAVED">Saved</option>
+                <option value="APPLIED">Applied</option>
+                <option value="INTERVIEW">Interview</option>
+                <option value="OFFER">Offer</option>
+                <option value="REJECTED">Rejected</option>
+                <option value="WITHDRAWN">Withdrawn</option>
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              className="rounded-md border border-[#DDD5C7] bg-white px-4 py-2 text-sm text-[#1E2128] hover:bg-[#F6F2EA] transition-colors"
+            >
+              Filter
+            </button>
+
+            {(salaryMinFilter ||
+              salaryMaxFilter ||
+              postedFromFilter ||
+              postedToFilter ||
+              statusFilter ||
+              locationFilter ||
+              typeFilter ||
+              query) && (
+              <Link
+                href="/dashboard"
+                className="text-sm text-[#6B6459] hover:text-[#1E2128] transition-colors pb-2"
+              >
+                Clear filters
+              </Link>
+            )}
+          </div>
         </form>
 
         {/* Táblázat */}
@@ -147,73 +258,88 @@ export default async function DashboardPage({
                   <th className="px-5 py-3 font-medium">Salary Range</th>
                   <th className="px-5 py-3 font-medium">Posted</th>
                   <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium">Applied On</th>
                   <th className="px-5 py-3 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
-                {jobs.map((job) => (
-                  <tr
-                    key={job.id}
-                    className="border-b border-[#EFEAE0] last:border-0 hover:bg-[#FBF9F5] transition-colors"
-                  >
-                    <td className="px-5 py-4">
-                      <p className="font-medium text-[#1E2128]">{job.title}</p>
-                      <p className="text-xs text-[#8A8375] mt-0.5">{job.company.name}</p>
-                    </td>
-                    <td className="px-5 py-4 text-[#4B5563]">{job.location ?? '—'}</td>
-                    <td className="px-5 py-4">
-                      <span
-                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                          job.remote
-                            ? 'bg-[#DB9A3C]/15 text-[#B5792A]'
-                            : 'bg-[#6B6459]/10 text-[#6B6459]'
-                        }`}
-                      >
-                        {job.remote ? 'Remote' : 'On-site'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-[#4B5563]">
-                      {job.salaryMin && job.salaryMax
-                        ? `$${job.salaryMin.toLocaleString()} – $${job.salaryMax.toLocaleString()}`
-                        : '—'}
-                    </td>
-                    <td className="px-5 py-4 text-[#4B5563]">
-                      {job.postedAt
-                        ? new Date(job.postedAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })
-                        : '—'}
-                    </td>
-                    <td className="px-5 py-4">
-                      <StatusCell jobId={job.id} initialStatus={statusByJobId.get(job.id) ?? null} />
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      {job.url ? (
-                        <a
-                          href={job.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs font-medium border border-[#DDD5C7] rounded-md px-3 py-1.5 hover:bg-[#F6F2EA] transition-colors"
+                {jobs.map((job) => {
+                  const application = applicationByJobId.get(job.id)
+                  return (
+                    <tr
+                      key={job.id}
+                      className="border-b border-[#EFEAE0] last:border-0 hover:bg-[#FBF9F5] transition-colors"
+                    >
+                      <td className="px-5 py-4">
+                        <p className="font-medium text-[#1E2128]">{job.title}</p>
+                        <p className="text-xs text-[#8A8375] mt-0.5">{job.company.name}</p>
+                      </td>
+                      <td className="px-5 py-4 text-[#4B5563]">{job.location ?? '—'}</td>
+                      <td className="px-5 py-4">
+                        <span
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                            job.remote
+                              ? 'bg-[#DB9A3C]/15 text-[#B5792A]'
+                              : 'bg-[#6B6459]/10 text-[#6B6459]'
+                          }`}
                         >
-                          View Job
-                        </a>
-                      ) : (
-                        <Link
-                          href={`/dashboard/jobs/${job.id}`}
-                          className="text-xs font-medium border border-[#DDD5C7] rounded-md px-3 py-1.5 hover:bg-[#F6F2EA] transition-colors"
-                        >
-                          View Job
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                          {job.remote ? 'Remote' : 'On-site'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-[#4B5563]">
+                        {job.salaryMin && job.salaryMax
+                          ? `$${job.salaryMin.toLocaleString()} – $${job.salaryMax.toLocaleString()}`
+                          : '—'}
+                      </td>
+                      <td className="px-5 py-4 text-[#4B5563]">
+                        {job.postedAt
+                          ? new Date(job.postedAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                          : '—'}
+                      </td>
+                      <td className="px-5 py-4">
+                        <StatusCell jobId={job.id} initialStatus={application?.status ?? null} />
+                      </td>
+                      <td className="px-5 py-4">
+                        <AppliedAtCell
+                          jobId={job.id}
+                          tracked={!!application}
+                          initialAppliedAt={
+                            application?.appliedAt
+                              ? application.appliedAt.toISOString().slice(0, 10)
+                              : null
+                          }
+                        />
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        {job.url ? (
+                          <a
+                            href={job.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium border border-[#DDD5C7] rounded-md px-3 py-1.5 hover:bg-[#F6F2EA] transition-colors"
+                          >
+                            View Job
+                          </a>
+                        ) : (
+                          <Link
+                            href={`/dashboard/jobs/${job.id}`}
+                            className="text-xs font-medium border border-[#DDD5C7] rounded-md px-3 py-1.5 hover:bg-[#F6F2EA] transition-colors"
+                          >
+                            View Job
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
 
                 {jobs.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-[#8A8375]">
+                    <td colSpan={8} className="px-5 py-12 text-center text-[#8A8375]">
                       Nincs a szűrésnek megfelelő állás.
                     </td>
                   </tr>
