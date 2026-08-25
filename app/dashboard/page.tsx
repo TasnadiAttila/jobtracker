@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { StatusCell } from './status-cell'
 
 const PAGE_SIZE = 9
 
@@ -35,7 +36,7 @@ export default async function DashboardPage({
     ],
   }
 
-  const [jobs, total, locations] = await Promise.all([
+  const [jobs, total, locations, applications] = await Promise.all([
     prisma.job.findMany({
       where,
       include: { company: true },
@@ -49,7 +50,13 @@ export default async function DashboardPage({
       distinct: ['location'],
       where: { location: { not: null } },
     }),
+    prisma.application.findMany({
+      where: { userId: session.user!.id },
+      select: { jobId: true, status: true },
+    }),
   ])
+
+  const statusByJobId = new Map(applications.map((a) => [a.jobId, a.status]))
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -139,6 +146,7 @@ export default async function DashboardPage({
                   <th className="px-5 py-3 font-medium">Type</th>
                   <th className="px-5 py-3 font-medium">Salary Range</th>
                   <th className="px-5 py-3 font-medium">Posted</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
                   <th className="px-5 py-3 font-medium"></th>
                 </tr>
               </thead>
@@ -178,6 +186,9 @@ export default async function DashboardPage({
                           })
                         : '—'}
                     </td>
+                    <td className="px-5 py-4">
+                      <StatusCell jobId={job.id} initialStatus={statusByJobId.get(job.id) ?? null} />
+                    </td>
                     <td className="px-5 py-4 text-right">
                       {job.url ? (
                         <a
@@ -202,7 +213,7 @@ export default async function DashboardPage({
 
                 {jobs.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-[#8A8375]">
+                    <td colSpan={7} className="px-5 py-12 text-center text-[#8A8375]">
                       Nincs a szűrésnek megfelelő állás.
                     </td>
                   </tr>
